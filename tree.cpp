@@ -13,14 +13,16 @@ using std::string;
 
 #include "tree.h"
 
-void TreeNode:: addChild(TreeNode* node)
+void TreeNode::addChild(TreeNode* node)
 {
-	if(!this->child)
+	if(this->child==nullptr)
+	{
 		this->child=node;
+	}
 	else
 	{
 		TreeNode *p=child;
-		while(p->sibling)
+		while(p->sibling!=nullptr)
 		{
 			p=p->sibling;
 		}
@@ -29,15 +31,18 @@ void TreeNode:: addChild(TreeNode* node)
 };
 void TreeNode:: addSibling(TreeNode* node)
 {
-	TreeNode *p=this->sibling;
+	TreeNode *p=this;
 	while(p->sibling)
 		p=p->sibling;
 	p->sibling=node; 
 };
+int num=0;
 void TreeNode:: genNodeId(TreeNode *node)
 {
+	
 	if (node) {
-		node->nodeID++;//调用操作结点数据的函数方法
+		node->nodeID=num;
+		num++;;//调用操作结点数据的函数方法
         genNodeId(node->child);//访问该结点的左孩子
         genNodeId(node->sibling);//访问该结点的右孩子
     }
@@ -46,9 +51,8 @@ void TreeNode:: genNodeId(TreeNode *node)
 
 void TreeNode:: printAST(TreeNode *node)
 {
-	cout<<111<<endl;
 	if (node) {
-		printNodeInfo();//调用操作结点数据的函数方法
+		printNodeInfo(node);//调用操作结点数据的函数方法
         printAST(node->child);//访问该结点的左孩子
         printAST(node->sibling);//访问该结点的右孩子
     }
@@ -59,29 +63,31 @@ void TreeNode:: printAST(TreeNode *node)
 * 以下的几个函数皆为在printAST过程中辅助输出使用
 * 同学们可以根据需要自己使用其他方法
 ***/
-void TreeNode:: printNodeInfo()
+void TreeNode:: printNodeInfo(TreeNode *node)
 {
-	string info=this->nodeTypeInfo();
-	cout<<"ID:"<<this->nodeID<<"TYPE:"<<info<<endl;
+	string info=node->nodeTypeInfo(node);
+	cout<<"ID:"<<node->nodeID<<"          TYPE:"<<info<<endl<<endl;
 
 }
 ;
-void TreeNode:: printNodeConnection()
+void TreeNode:: printNodeConnection(TreeNode *node)
 {
-	if(this->child&&this->sibling)
-		cout<<"child:"<<this->child->nodeID<<"sibling:"<<this->sibling->nodeID<<endl;
-	else if(this->child&&!this->sibling)
-		cout<<"child:"<<this->child->nodeID<<endl;
-	else if(!this->child&&this->sibling)
-		cout<<"sibling:"<<this->sibling->nodeID<<endl;
-	else if(!this->child&&!this->sibling)
+	if(node->child&&node->sibling)
+		cout<<"child:"<<node->child->nodeID<<"sibling:"<<node->sibling->nodeID<<endl;
+	else if(node->child&&!node->sibling)
+		cout<<"child:"<<node->child->nodeID<<endl;
+	else if(!node->child&&node->sibling)
+		cout<<"sibling:"<<node->sibling->nodeID<<endl;
+	else if(!node->child&&!node->sibling)
 		cout<<"no connection below this node!"<<endl;
 }
 ;
-string TreeNode:: nodeTypeInfo()
+string TreeNode:: nodeTypeInfo(TreeNode *node)
 {
-	string typeinfo;
-	switch(this->nodeType)
+	string typeinfo="unrecognize";
+	if(node->nodeType==NODE_STMT)
+		typeinfo="NODE_STMT";
+	switch(node->nodeType)
 	{
 		case '0' :typeinfo="NODE_CONST";break;
 		case '1' :typeinfo="NODE_BOOL";break;
@@ -91,10 +97,10 @@ string TreeNode:: nodeTypeInfo()
 		case '5' :typeinfo="NODE_STMT";break;
 		case '6' :typeinfo="NODE_PROG";break;
 		case '7' :typeinfo="NODE_OP";break;		
-		default :cout << "error node_type!" << endl;
+		default :break;
    }
-	if(this->nodeType=NODE_STMT)
-		switch(this->stmtType)
+	if(node->nodeType=NODE_STMT)
+		switch(node->stmtType)
 	{
 		case '0' :typeinfo="STMT_IF";break;
 		case '1' :typeinfo="STMT_WHILE";break;
@@ -102,26 +108,25 @@ string TreeNode:: nodeTypeInfo()
 		case '3' :typeinfo="STMT_ASSIGN";break;
 		case '4' :typeinfo="STMT_PRINTF";break;
 		case '5' :typeinfo="STMT_SCANF";break;		
-		default :cout << "error stmt_type!" << endl;
+		default :break;
    }
-	if(this->nodeType=NODE_OP)
-		switch(this->opType)
+	if(node->nodeType=NODE_OP)
+		switch(node->opType)
 	{
 		case '0' :typeinfo="OP_EQUAL";break;
 		case '1' :typeinfo="OP_NOT";break;
-		case '2' :typeinfo="OP_ADD";break;
-		case '3' :typeinfo="OP_SUB";break;
-		case '4' :typeinfo="OP_MUL";break;
-		case '5' :typeinfo="OP_DIV";break;		
-		default :cout << "error op_type!" << endl;
+		case '2' :typeinfo="OP_ADD";break;	
+		default :break;
    }
-	if(this->nodeType=NODE_VAR)
-		switch(this->varType)
+	if(node->nodeType=NODE_VAR)
+		switch(node->varType)
 	{
 		case '0' :typeinfo="VAR_INTEGER";break;
 		case '1' :typeinfo="VAR_VOID";break;	
-		default :cout << "error var_type!" << endl;
+		default :break;
    }
+	if(node->stmtType==STMT_IF)
+		typeinfo="STMT_IF";
 	return typeinfo;
 	
 }
@@ -130,14 +135,69 @@ TreeNode::TreeNode(NodeType type)
 {
 	this->child=nullptr;
 	this->sibling=nullptr;
-	nodeType=type;
+	this->var_name="";
+	this->nodeType=type;
 };
 
+
+/*
+int main()
+{
+	TreeNode *node=new TreeNode(NODE_STMT);
+	node->var_name="alksjdklasjdkl";
+	cout<<"ok";
+	TreeNode *T=new TreeNode(NODE_STMT);
+
+	TreeNode *S=new TreeNode(NODE_STMT);
+	S->var_name="ssss";
+	T->addChild(node);
+	T->addChild(S);
+	cout<<T->child->var_name;
+	cout<<T->child->sibling->var_name;
+	cout<<"ok";
+	/*
+		TreeNode * a;
+		TreeNode * b;
+		TreeNode * c;
+		TreeNode * d;
+		TreeNode * e;
+		TreeNode * f;
+		TreeNode * g;
+		TreeNode * h;
+	a=(TreeNode*)malloc(sizeof(TreeNode));
+	b=(TreeNode*)malloc(sizeof(TreeNode));
+	c=(TreeNode*)malloc(sizeof(TreeNode));
+	d=(TreeNode*)malloc(sizeof(TreeNode));
+	e=(TreeNode*)malloc(sizeof(TreeNode));
+	f=(TreeNode*)malloc(sizeof(TreeNode));
+	g=(TreeNode*)malloc(sizeof(TreeNode));
+	h=(TreeNode*)malloc(sizeof(TreeNode));
+		T->addChild(a);
+		T->addChild(b);
+		T->addChild(c);
+		T->addChild(d);
+		T->addChild(e);
+		T->addChild(f);
+		T->addChild(g);
+	*/
+
+	T->genNodeId(T);
+	T->printAST(T);
+	
+	return 0;
+
+}
+
+
+*/
+/*
 int main()
 {
 	TreeNode *T;
 	T=(TreeNode*)malloc(sizeof(TreeNode));
     T->nodeID=1;
+	T->nodeType=NODE_STMT;
+	T->stmtType=STMT_IF;
     T->child=(TreeNode*)malloc(sizeof(TreeNode));
     T->sibling=(TreeNode*)malloc(sizeof(TreeNode));
   
@@ -164,3 +224,4 @@ int main()
 	return 0;
 
 }
+*/
