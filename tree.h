@@ -2,7 +2,6 @@
 #define TREE_H
 #include<iostream>
 #include<string>
-#include<queue>
 
 using std::cerr;
 using std::cout;
@@ -33,9 +32,6 @@ enum OpType{
     OP_EQUAL,
     OP_NOT,
     OP_ADD,
-	OP_SUB,
-	OP_MUL,
-	OP_DIV
 };
 
 enum VarType{
@@ -46,8 +42,9 @@ enum VarType{
 struct TreeNode {
     int nodeID;
     NodeType nodeType;
-    TreeNode* child  ;
-    TreeNode* sibling ;
+
+    TreeNode *child ;
+    TreeNode *sibling ;
 
     void addChild(TreeNode *);
     void addSibling(TreeNode *);
@@ -59,9 +56,9 @@ struct TreeNode {
      * 以下的几个函数皆为在printAST过程中辅助输出使用
      * 同学们可以根据需要自己使用其他方法
     ***/
-    void printNodeInfo();
-    void printNodeConnection();
-    string nodeTypeInfo();
+    void printNodeInfo(TreeNode *);
+    void printNodeConnection(TreeNode *);
+    string nodeTypeInfo(TreeNode *);
 
     int int_val;
     bool bool_val;
