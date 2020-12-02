@@ -3,12 +3,22 @@
     #include"common.h"
     #include"main.tab.hh"
 %}
-
+DIGIT [0-9]
 INTEGER [0-9]+
-ID [[:alpha:]_][[:alpha:][:digit:]_]*
+LETTER [a-zA-Z]
+ID ({LETTER}|_)({LETTER}|_|{DIGIT})* 
 
 EOL (\r\n|\n)
 WHITE [\t ]
+
+STRING \"[^\"\n]*\"
+
+SGPS \/\/.*
+commentbegin "/*"
+commentelement .|\n
+commentend "*/"
+%n COMMENT
+
 %%
 
 "true" {
@@ -26,21 +36,42 @@ WHITE [\t ]
 
 "int" return INT;
 "void" return VOID;
+"char" return CHAR;
 
 "if" return IF;
 "while" return WHILE;
 "else" return ELSE;
+"for"  return FOR;
 
 "printf" return PRINTF;
 "scanf" return SCANF;
 
 "=" return ASSIGN;
+"+=" return ASSIGN;
+"-=" return ASSIGN;
 
+"-" return MINUS;
 "+" return ADD;
+"%" return MOD;
+"++" return AONE;
+
+"&&" return AND;
+"||" return OR;
+"!=" return NE;
+"<"	return LT;
+"<=" return LE;
+">"	return GT;
+">=" return GE;
+
+
+
+
 
 "!" return NOT;
 "==" return EQUAL;
 
+"&" return REFER;
+"," return COMMA;
 ";" return SEMICOLON;
 "(" return LPAREN;
 ")" return RPAREN;
@@ -61,5 +92,25 @@ WHITE [\t ]
 }
 {EOL}
 {WHITE}
+{SGPS} {
+    TreeNode *node = new TreeNode(NODE_COMM);
+    node->comm = string(yytext);
+    yylval = node;
+    return COMMENT;
+}
+{commentbegin} {BEGIN COMMENT;}
+<COMMENT>{commentelement} {
+    TreeNode *node = new TreeNode(NODE_COMM);
+    node->comm = string(yytext);
+    yylval = node;
+    return COMMENT;
+}
+<COMMENT>{commentend} {BEGIN INITIAL;}
 
+{STRING}   {
+    TreeNode *node = new TreeNode(NODE_STRING);
+    node->comm = string(yytext);
+    yylval = node;
+    return STRING;
+}
 %%
