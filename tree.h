@@ -2,6 +2,7 @@
 #define TREE_H
 #include<iostream>
 #include<string>
+#include<queue>
 
 using std::cerr;
 using std::cout;
@@ -16,7 +17,10 @@ enum NodeType{
     NODE_TYPE,
     NODE_STMT,
     NODE_PROG,
-    NODE_OP
+    NODE_OP,
+    NODE_FUNC,   //函数
+    NODE_COMM,   //注释
+    NODE_STRING  //字符串
 };
 
 enum StmtType{
@@ -25,26 +29,34 @@ enum StmtType{
     STMT_DECL,
     STMT_ASSIGN,
     STMT_PRINTF,
-    STMT_SCANF
+    STMT_SCANF,
+    STMT_FUNC,     //函数
+    STMT_FOR
 };
 
 enum OpType{
     OP_EQUAL,
     OP_NOT,
     OP_ADD,
+    OP_MOD,   //模运算
+    OP_GT,   //大于
+    OP_LE,   //小于等于
+    OP_LT,     //小于
+    OP_OR,    //或
+    OP_AND    //与
 };
 
 enum VarType{
     VAR_INTEGER,
-    VAR_VOID
+    VAR_VOID,
+    VAR_CHAR      //新增类型char。
 };
 
 struct TreeNode {
     int nodeID;
     NodeType nodeType;
-
-    TreeNode *child ;
-    TreeNode *sibling ;
+    TreeNode* child  ;
+    TreeNode* sibling ;
 
     void addChild(TreeNode *);
     void addSibling(TreeNode *);
@@ -60,12 +72,14 @@ struct TreeNode {
     void printNodeConnection(TreeNode *);
     string nodeTypeInfo(TreeNode *);
 
-    int int_val;
+    string int_val;
     bool bool_val;
     StmtType stmtType;
     OpType opType;
     VarType varType;
     string var_name;
+
+    string comm; //注释
 
     TreeNode(NodeType type);
 };
