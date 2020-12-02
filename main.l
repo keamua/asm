@@ -49,7 +49,7 @@ WHITE [\t ]
 
 {INTEGER} {
     TreeNode *node = new TreeNode(NODE_CONST);
-    node->int_val = atoi(yytext);
+    node->int_val = string(yytext);
     yylval = node;
     return INTEGER;
 }
