@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <string>
-#include <queue>
+
 using namespace std;
 
 using std::cerr;
@@ -53,6 +53,7 @@ void TreeNode:: printAST(TreeNode *node)
 {
 	if (node) {
 		printNodeInfo(node);//调用操作结点数据的函数方法
+		printNodeConnection(node);
         printAST(node->child);//访问该结点的左孩子
         printAST(node->sibling);//访问该结点的右孩子
     }
@@ -66,20 +67,20 @@ void TreeNode:: printAST(TreeNode *node)
 void TreeNode:: printNodeInfo(TreeNode *node)
 {
 	string info=node->nodeTypeInfo(node);
-	cout<<"ID:"<<node->nodeID<<"          TYPE:"<<info<<endl<<endl;
+	cout<<"ID:"<<node->nodeID<<"          TYPE:"<<info<<endl;
 
 }
 ;
 void TreeNode:: printNodeConnection(TreeNode *node)
 {
 	if(node->child&&node->sibling)
-		cout<<"child:"<<node->child->nodeID<<"sibling:"<<node->sibling->nodeID<<endl;
+		cout<<"child:"<<node->child->nodeID<<"sibling:"<<node->sibling->nodeID<<endl<<endl;
 	else if(node->child&&!node->sibling)
-		cout<<"child:"<<node->child->nodeID<<endl;
+		cout<<"child:"<<node->child->nodeID<<endl<<endl;
 	else if(!node->child&&node->sibling)
-		cout<<"sibling:"<<node->sibling->nodeID<<endl;
+		cout<<"sibling:"<<node->sibling->nodeID<<endl<<endl;
 	else if(!node->child&&!node->sibling)
-		cout<<"no connection below this node!"<<endl;
+		cout<<"no connection below this node!"<<endl<<endl;
 }
 ;
 string TreeNode:: nodeTypeInfo(TreeNode *node)
@@ -99,7 +100,7 @@ string TreeNode:: nodeTypeInfo(TreeNode *node)
 	{
 		typeinfo="NODE_VAR";
 		typeinfo+="     idname:";
-		typeinfo+=node->var_name
+		typeinfo+=node->var_name;
 	}
 	if(node->nodeType==NODE_EXPR)
 		typeinfo="NODE_EXPR";			
@@ -108,6 +109,7 @@ string TreeNode:: nodeTypeInfo(TreeNode *node)
 		typeinfo="NODE_TYPE";
 		if(node->varType==VAR_INTEGER){typeinfo="VAR_INTEGER";}
 		if(node->varType==VAR_VOID){typeinfo="VAR_VOID";}
+		if(node->varType==VAR_CHAR){typeinfo="VAR_CHAR";}
 	}
 	if(node->nodeType==NODE_STMT)
 	{
@@ -118,6 +120,8 @@ string TreeNode:: nodeTypeInfo(TreeNode *node)
 		if(node->stmtType==STMT_ASSIGN){typeinfo="STMT_ASSIGN";}
 		if(node->stmtType==STMT_PRINTF){typeinfo="STMT_PRINTF";}
 		if(node->stmtType==STMT_SCANF){typeinfo="STMT_SCANF";}
+		if(node->stmtType==STMT_FOR){typeinfo="STMT_FOR";}
+		if(node->stmtType==STMT_FUNC){typeinfo="new type to be complate ";}
 	}
 	if(node->nodeType==NODE_PROG)
 		typeinfo="NODE_PROG";
@@ -127,8 +131,28 @@ string TreeNode:: nodeTypeInfo(TreeNode *node)
 		if(node->opType==OP_EQUAL){typeinfo="OP_EQUAL";}
 		if(node->opType==OP_ADD){typeinfo="OP_ADD";}
 		if(node->opType==OP_NOT){typeinfo="OP_NOT";}
+		if(node->opType==OP_MOD){typeinfo="OP_MOD";}
+		if(node->opType==OP_GT){typeinfo="OP_GT";}
+		if(node->opType==OP_LE){typeinfo="OP_LE";}
+		if(node->opType==OP_LT){typeinfo="OP_LT";}
+		if(node->opType==OP_AND){typeinfo="OP_AND";}
+		if(node->opType==OP_OR){typeinfo="OP_OR";}
 	}				
-
+	if(node->nodeType==NODE_STRING)
+	{
+		typeinfo="NODE_STRING";
+		typeinfo+="     String_content";
+		typeinfo+=node->comm;
+	}
+		
+	if(node->nodeType==NODE_COMM)
+	{
+		typeinfo="NODE_COMM";
+		typeinfo+="     COMMENT_content";
+		typeinfo+=node->comm;
+	}
+	if(node->nodeType==NODE_FUNC)
+		typeinfo="NODE_FUNC";	
 	return typeinfo;
 	
 }
@@ -138,6 +162,7 @@ TreeNode::TreeNode(NodeType type)
 	this->child=nullptr;
 	this->sibling=nullptr;
 	this->var_name="";
+	this->comm="";
 	this->bool_val=true;
 	this->int_val="";
 	this->nodeType=type;
