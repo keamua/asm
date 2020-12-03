@@ -13,11 +13,10 @@ WHITE [\t ]
 
 STRING \"[^\"\n]*\"
 
-SGPS \/\/.*
-commentbegin "/*"
-commentelement .|\n
-commentend "*/"
-%n COMMENT
+SGPS \/\/.*\n
+COMMENT \/\*(?:[^\*]|\*+[^\/\*])*\*+\/
+
+
 
 %%
 
@@ -98,14 +97,13 @@ commentend "*/"
     yylval = node;
     return COMMENT;
 }
-{commentbegin} {BEGIN COMMENT;}
-<COMMENT>{commentelement} {
+{COMMENT} {
     TreeNode *node = new TreeNode(NODE_COMM);
     node->comm = string(yytext);
     yylval = node;
     return COMMENT;
 }
-<COMMENT>{commentend} {BEGIN INITIAL;}
+
 
 {STRING}   {
     TreeNode *node = new TreeNode(NODE_STRING);
