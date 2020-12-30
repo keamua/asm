@@ -1,169 +1,431 @@
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
 #include <iostream>
 #include <string>
 
-using namespace std;
-
-using std::cerr;
-using std::cout;
-using std::endl;
-using std::string;
+using namespace ::std;
 
 #include "tree.h"
+#include "symbol.h"
+//#include "lexer.hpp"
+//#include "parser.hpp"
 
-void TreeNode::addChild(TreeNode* node)
+int nodecount = 0;					//结点个数
+int treeLevel = 0;					//遍历层数
+int tempCount = 0;					//临时变量个数
+extern int lineno;					//行号
+extern symbol_table symtbl;			//符号表
+
+tree parse_tree;					//语法树
+
+void Node::output(void)				//打印结点信息
 {
-	if(this->child==nullptr)
+	// write your own code to print the parser tree
+	cout << endl;
+}
+void printTree(Node* currNode) 		//打印整个树的信息，先序遍历 
+{
+	char* transType = (char*)malloc(40);
+	if (currNode != NULL)
 	{
-		this->child=node;
+		for (int a = 0; a<treeLevel; a++)
+		{
+			printf("   ");
+		}
+		
+		switch (currNode->type)
+		{
+			case 0: transType = "Notype"; break;
+			case 1: transType = "Interge"; break;
+			case 2: transType = "Boolean"; break;
+			case 3: transType = "Charactor"; break;
+			case 4: transType = "Const_Int"; break;
+			case 5: transType = "Const_Char"; break;
+			case 6: transType = "Void"; break;
+			case 7: transType = "ErrorType"; break;
+			default: break;
+		}
+		
+		printf("%s [ %s ] --- { %s }\n", currNode->parseName, currNode->attr, transType);
+
+		Node* childNode;
+		childNode = (Node*)malloc(sizeof(Node));
+		int childNum = 0;
+		for (int i = 0; currNode->children[i] != NULL; i++)
+		{
+			childNum++;
+		}
+		treeLevel++;
+		for (int j = 0; j < childNum; j++)
+		{
+			childNode = currNode->children[j];
+			printTree(childNode);
+			treeLevel--;
+		}
 	}
+}
+
+void tree::type_check(Node *t)		//类型检查的函数，分三类，每类检查不同
+{
+	if (t->kind == STMT_NODE)		//如果是陈述句的类型
+	{
+		if (t->kind_kind == WHILE_STMT)	//while的第一个孩子即括号里的，保证是布尔型（或者是整型？）
+		{
+			if (t->children[0]->type != Boolean || t->children[0]->type != Integer)
+			{
+				cerr << "Bad boolean type at line: " << t->lineno << endl;
+			}
+			else if(t->children[0]->type == Integer)
+			{
+				t->type = Boolean;	//整型的时候按照建立结点时是看expr的类型位integer，这里换成boolean。
+			}
+			else
+				return;
+		}
+		else if(t->kind_kind == FOR_STMT) //for的第二个孩子，即判断的语句
+		{
+			if(t->children[1]->type != Boolean || t->children[1]->type != Integer)
+			{
+				cerr << "Bad boolean type at line: " << t->lineno << endl;
+			}
+			else if(t->children[1]->type == Integer)
+			{
+				t->type = Boolean;	
+			}
+			else
+				return;
+		}
+		else if(t->kind_kind == IF_STMT) //if同while
+		{
+			if(	t->children[0]->type != Boolean || t->children[0]->type != Integer)
+			{
+				cerr << "Bad boolean type at line: " << t->lineno << endl;
+			}
+			else if(t->children[0]->type == Integer)
+			{
+				t->type = Boolean;	
+			}
+			else
+				return;
+		}
+		else if(t->kind_kind == RETURN_STMT) //应该判断一下和函数的类型是否相同，待完成
+		{
+			return;
+		}
+		else if(t->kind_kind == ASSIGN_STMT)//赋值语句保证，等号左右两边的值类型相同，强制转换就算了吧
+		{
+			if(t->children[0]->type != t->children[1]->type )
+			{
+				cerr << "assignment of incompatible type at line: " << t->lineno << endl;
+			}
+			else
+				return;
+		}
+		else
+			return;
+					
+	}
+	else if(t->kind == EXPR_NODE)	//如果是表达式的类型
+	{
+		if(t->kind_kind == OP_EXPR)	//逻辑运算 或者 加减乘除的表达式，左右也要一样，仍然不包括 +'a' 这样的强制转换，可以考虑实现
+		{
+			if(t->children[0]->type != t->children[1]->type)
+			{
+				cerr << "Op applied to incompatible pair at line: " << t->lineno << endl;
+			}
+			if(	(t->attr.op == EQt) || 
+				(t->attr.op == NEt) || 
+				(t->attr.op == LEt) || 
+				(t->attr.op == GEt) ||
+				(t->attr.op == LTt) || 
+				(t->attr.op == GTt) || 
+				(t->attr.op == ANDt) || 
+				(t->attr.op == ORt) || 
+				(t->attr.op == XORt))
+				t->type = Boolean;	//是逻辑运算则布尔型
+			else
+				t->type = Integer;	//不是的话类型是整型
+			return;
+		}
+		else 
+		{
+			return;
+		}
+		
+	}
+	else if(t->kind == DECL_NODE)	//声明类型的错误判断，对于id重复声明和使用未声明的变量在，语法分析中有实现，这里处理函数声明类型和返回值不同（未完成）。
+	{
+		if(t->kind_kind == FUN_DECL)
+		{
+			if (t->children[0]->type != t->children[3]->type)
+			{
+				cerr << "function's return different the claim at line: " << t->lineno << endl;
+			}
+			else
+				return;
+		}
+		else
+			return;
+	}
+	return;
+}
+
+void tree::get_temp_var(Node *t)	//获得一个产生一个临时变量，这个判断条件不太懂
+{
+	if (t->kind != EXPR_NODE)		//必须是表达式中的临时变量
+		return;
+	if (t->attr.op < ADDt || t->attr.op > DIVt)	//而且是加减乘除
+		return;
+
+	Node *arg1 = t->children[0];	//第一个参数
+	Node *arg2 = t->children[1];	//第二个参数
+
+	if (arg1->kind_kind == OP_EXPR)	//如果第一个参数是运算类型的（难道临时变量的要求只能是常数，或者说在最下级已经定义过了？）
+		temp_var_seq--;				//临时变量的序号减一个
+	if (arg2 && arg2->kind_kind == OP_EXPR)	//判断第二个变量
+		tree::temp_var_seq--;
+	t->temp_var = tree::temp_var_seq;	//在这个结点上会有一个临时变量，他的序号是这个
+	tree::temp_var_seq++;	//序号增加
+}
+
+Node* tree::NewRoot(int kind, int kind_kind, NodeAttr attr, int type,
+				   Node *child1, Node *child2, Node *child3, Node *child4) //生成新的树的结点
+{
+	Node *t = new Node;
+	
+	if (NULL == t)
+		cerr << "Out of memory at line %d\n" << lineno;
 	else
 	{
-		TreeNode *p=child;
-		while(p->sibling!=nullptr)
+		t->kind = kind;
+		t->kind_kind = kind_kind;
+		t->attr = attr;
+		t->type = type;
+		t->children[0] = child1;
+		t->children[1] = child2;
+		t->children[2] = child3;
+		t->children[3] = child4;
+		t->lineno = lineno;
+		t->seq = tree::node_seq++;
+		t->sibling = NULL;
+		t->label.begin_label = "";
+		t->label.next_label = "";
+		t->label.true_label = "";
+		t->label.false_label = "";
+		root = t;
+		type_check(t); // type check
+		get_temp_var(t); // generate temp veriables
+	}
+	return t;
+}
+
+string tree::new_label(void) //打label
+{
+	char tmp[20];
+
+	sprintf(tmp, "@%d", tree::label_seq);
+	tree::label_seq++;
+	return tmp;
+}
+
+void tree::stmt_get_label(Node *t)	//陈述句的打label
+{
+	switch (t->kind_kind)			
+	{
+	case COMP_STMT:					//复杂陈述句
 		{
-			p=p->sibling;
+			Node *last;
+			Node *p;
+			for (p = t->children[0]; p->kind == DECL_NODE; p = p->sibling) ; //找到第一个不是声明语句的p
+
+			p->label.begin_label = t->label.begin_label;	//p的开始是t的开始
+			for (; p; p = p->sibling)
+			{
+				last = p;									//对p递归生成label，直到p是t的第一个孩子的最后一个结点
+				recursive_get_label(p);
+			}
+
+			t->label.next_label = last->label.next_label;	//t的下一个label是第一个孩子最后一个结点p的下一个label
+			if (t->sibling)
+				t->sibling->label.begin_label = t->label.next_label;//t的兄弟的开始label是t的nextlabel联系起来。
 		}
-		p->sibling=node;
+		break;
+
+	case WHILE_STMT:				//while句
+		{
+			Node *e = t->children[0];	//两个孩子
+			Node *s = t->children[1];
+
+			if (t->label.begin_label == "")
+				t->label.begin_label = new_label();
+			s->label.next_label = t->label.begin_label;
+
+			s->label.begin_label = e->label.true_label = new_label();
+
+			if (t->label.next_label == "")
+				t->label.next_label = new_label();
+			e->label.false_label = t->label.next_label;
+			if (t->sibling)
+				t->sibling->label.begin_label = t->label.next_label;
+
+			recursive_get_label(e);
+			recursive_get_label(s);
+		}
+    /* 补充上各种类型的label生成联系 */
 	}
-};
-void TreeNode:: addSibling(TreeNode* node)
+}
+
+void tree::expr_get_label(Node *t)  //表达式的label的生成
 {
-	TreeNode *p=this;
-	while(p->sibling)
-		p=p->sibling;
-	p->sibling=node; 
-};
-int num=0;
-void TreeNode:: genNodeId(TreeNode *node)
+	if (t->type != Boolean)			//如果不是逻辑表达式则不需要
+		return;
+
+	Node *e1 = t->children[0];		
+	Node *e2 = t->children[1];
+	switch (t->attr.op)
+	{
+	case ANDt:	//AND类型的话
+		e1->label.true_label = new_label();				//如果第一个参数的真 新开一个
+		e2->label.true_label = t->label.true_label;		//第二个的真 是结点的真
+		e1->label.false_label = e2->label.false_label = t->label.false_label; //e1和e2的假是结点t的假
+		break;
+
+	case ORt:
+		break;
+    /* 需要补充的其他的表达式类型 */
+	}
+	if (e1)
+		recursive_get_label(e1);
+	if (e2)
+		recursive_get_label(e2);
+}
+
+void tree::recursive_get_label(Node *t)		//递归生成label
 {
+	if (t->kind == STMT_NODE)
+		stmt_get_label(t);
+	else if (t->kind == EXPR_NODE)
+		expr_get_label(t);
+}
+
+void tree::get_label(void)
+{
+	Node *p = root;
+
+	p->label.begin_label = "_start";
+	recursive_get_label(p);
+}
+
+void tree::gen_header(ostream &out) //生成头文件
+{
+	out << "# your asm code header here" << endl;
+	/*your code here*/
+}
+
+void tree::gen_decl(ostream &out, Node *t)	//生成声明的变量代码
+{
+    out << endl << "# define your veriables and temp veriables here" << endl;
+	out << "\t.bss" << endl;
+	for (; t->kind == DECL_NODE; t = t->sibling)
+	{
+		for (Node *p = t->children[1]; p; p = p->sibling)
+			if (p->type == Integer)
+				out << "_" << symtbl.getname(p->attr.symtbl_seq) << ":" << endl;
+                out << "\t.zero\t4" << endl;
+                out << "\t.align\t4" << endl;
+	}
 	
-	if (node) {
-		node->nodeID=num;
-		num++;;//调用操作结点数据的函数方法
-        genNodeId(node->child);//访问该结点的左孩子
-        genNodeId(node->sibling);//访问该结点的右孩子
-    }
-    //如果结点为空，返回上一层
-};//从根节点开始逐个赋Id 实现方式同学们可以自行修改
+	for (int i = 0; i < temp_var_seq; i++) //临时变量的汇编声明
+	{
+		out << "t" <<  i << ":" << endl;
+        out << "\t.zero\t4" << endl;
+        out << "\t.align\t4" << endl;
+	}
+}
 
-void TreeNode:: printAST(TreeNode *node)
+void tree::stmt_gen_code(ostream &out, Node *t) //生成代码
 {
-	if (node) {
-		printNodeInfo(node);//调用操作结点数据的函数方法
-		printNodeConnection(node);
-        printAST(node->child);//访问该结点的左孩子
-        printAST(node->sibling);//访问该结点的右孩子
-    }
+	if (t->kind_kind == COMP_STMT)
+	{
+		for (int i = 0; t->children[i]; i++)
+		{
+			recursive_gen_code(out, t->children[i]);
+			for (Node *p = t->children[i]->sibling; p; p = p->sibling)
+				recursive_gen_code(out, p);
+		}
+	}
+	else if (t->kind_kind == WHILE_STMT)
+	{
+		if (t->label.begin_label != "")
+			out << t->label.begin_label << ":" << endl;
+		recursive_gen_code(out, t->children[0]);
+		recursive_gen_code(out, t->children[1]);
+		out << "\tjmp " << t->label.begin_label << endl;
+	}
+	else if (t->kind_kind == PRINT_STMT)
+	{
+		/* ... */
+	}
+    /* ... */
+}
 
-}
-;//打印语法树结点
-/***
-* 以下的几个函数皆为在printAST过程中辅助输出使用
-* 同学们可以根据需要自己使用其他方法
-***/
-void TreeNode:: printNodeInfo(TreeNode *node)
+void tree::expr_gen_code(ostream &out, Node *t)
 {
-	string info=node->nodeTypeInfo(node);
-	cout<<"ID:"<<node->nodeID<<"          TYPE:"<<info<<endl;
+	Node *e1 = t->children[0];
+	Node *e2 = t->children[1];
+	switch (t->attr.op)
+	{
+	case ASSIGNt:
+		break;
 
+	case ADDt:
+		out << "\tmovl $";
+		if (e1->kind_kind == ID_EXPR)
+			out << "_" << symtbl.getname(e1->attr.symtbl_seq);
+		else if (e1->kind_kind == CONST_EXPR)
+			out << e1->attr.vali;
+		else out << "t" << e1->temp_var;
+		out << ", %eax" <<endl;
+		out << "\taddl $";
+		if (e2->kind_kind == ID_EXPR)
+			out << "_" << symtbl.getname(e2->attr.symtbl_seq);
+		else if (e2->kind_kind == CONST_EXPR)
+			out << e2->attr.vali;
+		else out << "t" << e2->temp_var;
+		out << ", %eax" << endl;
+		out << "\tmovl %eax, $t" << t->temp_var << endl;
+		break;
+    case ANDt:
+        out << "\t# your own code of AND operation here" << endl;
+        out << "\tjl @1" << endl;
+        out << "\t# your asm code of AND operation end" << endl;
+	case LTt:
+		break;
+    /* ... */
+	}
 }
-;
-void TreeNode:: printNodeConnection(TreeNode *node)
+
+void tree::recursive_gen_code(ostream &out, Node *t) //递归生成代码
 {
-	if(node->child&&node->sibling)
-		cout<<"child:"<<node->child->nodeID<<"sibling:"<<node->sibling->nodeID<<endl<<endl;
-	else if(node->child&&!node->sibling)
-		cout<<"child:"<<node->child->nodeID<<endl<<endl;
-	else if(!node->child&&node->sibling)
-		cout<<"sibling:"<<node->sibling->nodeID<<endl<<endl;
-	else if(!node->child&&!node->sibling)
-		cout<<"no connection below this node!"<<endl<<endl;
+	if (t->kind == STMT_NODE)
+	{
+		stmt_gen_code(out, t);
+	}
+	else if (t->kind == EXPR_NODE && t->kind_kind == OP_EXPR)
+	{
+		expr_gen_code(out, t);
+	}
 }
-;
-string TreeNode:: nodeTypeInfo(TreeNode *node)
+
+void tree::gen_code(ostream &out)	//生成代码的总函数
 {
-	string typeinfo="unrecognize";
-	if(node->nodeType==NODE_CONST)
-	{
-		typeinfo="NODE_CONST";
-		typeinfo+="     valve=";
-		typeinfo+=node->int_val;
-	}
-	if(node->nodeType==NODE_BOOL)
-	{
-		typeinfo="NODE_BOOL";
-	}
-	if(node->nodeType==NODE_VAR)
-	{
-		typeinfo="NODE_VAR";
-		typeinfo+="     idname:";
-		typeinfo+=node->var_name;
-	}
-	if(node->nodeType==NODE_EXPR)
-		typeinfo="NODE_EXPR";			
-	if(node->nodeType==NODE_TYPE)
-	{
-		typeinfo="NODE_TYPE";
-		if(node->varType==VAR_INTEGER){typeinfo="VAR_INTEGER";}
-		if(node->varType==VAR_VOID){typeinfo="VAR_VOID";}
-		if(node->varType==VAR_CHAR){typeinfo="VAR_CHAR";}
-	}
-	if(node->nodeType==NODE_STMT)
-	{
-		typeinfo="NODE_STMT";
-		if(node->stmtType==STMT_IF){typeinfo="STMT_IF";}
-		if(node->stmtType==STMT_WHILE){typeinfo="STMT_WHILE";}
-		if(node->stmtType==STMT_DECL){typeinfo="STMT_DECL";}
-		if(node->stmtType==STMT_ASSIGN){typeinfo="STMT_ASSIGN";}
-		if(node->stmtType==STMT_PRINTF){typeinfo="STMT_PRINTF";}
-		if(node->stmtType==STMT_SCANF){typeinfo="STMT_SCANF";}
-		if(node->stmtType==STMT_FOR){typeinfo="STMT_FOR";}
-		if(node->stmtType==STMT_FUNC){typeinfo="new type to be complate ";}
-	}
-	if(node->nodeType==NODE_PROG)
-		typeinfo="NODE_PROG";
-	if(node->nodeType==NODE_OP)
-	{
-		typeinfo="NODE_OP";
-		if(node->opType==OP_EQUAL){typeinfo="OP_EQUAL";}
-		if(node->opType==OP_ADD){typeinfo="OP_ADD";}
-		if(node->opType==OP_NOT){typeinfo="OP_NOT";}
-		if(node->opType==OP_MOD){typeinfo="OP_MOD";}
-		if(node->opType==OP_GT){typeinfo="OP_GT";}
-		if(node->opType==OP_LE){typeinfo="OP_LE";}
-		if(node->opType==OP_LT){typeinfo="OP_LT";}
-		if(node->opType==OP_AND){typeinfo="OP_AND";}
-		if(node->opType==OP_OR){typeinfo="OP_OR";}
-	}				
-	if(node->nodeType==NODE_STRING)
-	{
-		typeinfo="NODE_STRING";
-		typeinfo+="     String_content";
-		typeinfo+=node->comm;
-	}
-		
-	if(node->nodeType==NODE_COMM)
-	{
-		typeinfo="NODE_COMM";
-		typeinfo+="     COMMENT_content";
-		typeinfo+=node->comm;
-	}
-	if(node->nodeType==NODE_FUNC)
-		typeinfo="NODE_FUNC";	
-	return typeinfo;
-	
+	gen_header(out);
+	Node *p = root->children[0];
+	if (p->kind == DECL_NODE)
+		gen_decl(out, p);
+    out << endl << endl << "# your asm code here" << endl;
+	out << "\t.text" << endl;
+    out << "\t.globl _start" << endl;
+	recursive_gen_code(out, root);
+	if (root->label.next_label != "")
+		out << root->label.next_label << ":" << endl;
+	out << "\tret" << endl;
 }
-;
-TreeNode::TreeNode(NodeType type)
-{
-	this->child=nullptr;
-	this->sibling=nullptr;
-	this->var_name="";
-	this->comm="";
-	this->bool_val=true;
-	this->int_val="";
-	this->nodeType=type;
-};
