@@ -1,13 +1,13 @@
 #ifndef TREE_H
 #define TREE_H
-enum
+enum						//三种语句的类型：陈述，表达式，和定义
 {
 	STMT_NODE = 0,
 	EXPR_NODE,
 	DECL_NODE
 };
 
-enum
+enum						//陈述句的类型：while，if，for，assign，sancf，printf，和复杂类型
 {
 	WHILE_STMT = 0,
 	FOR_STMT,
@@ -15,11 +15,11 @@ enum
 	ASSIGN_STMT,
 	RETURN_STMT,
 	SCANF_STMT,
-	PRINT_STMT,
+	PRINTF_STMT,
 	COMP_STMT
 };
 
-enum
+enum						//表达式的类型：类型，运算，和常量表达式，和id
 {
 	TYPE_EXPR = 0,
 	OP_EXPR,
@@ -27,24 +27,25 @@ enum
 	ID_EXPR
 };
 
-enum
+enum						//定义的类型，变量定义和函数定义
 {
 	VAR_DECL = 0,
 	FUN_DECL
 };
 
-enum
+enum						//表达式里面的type：无类型，整型，布尔型，字符，空，错误等
 {
 	Notype = 0,
 	Integer,
 	Boolean,
+	String,
 	Charactor,
 	Const_Int, 
 	Const_Char, 
 	Void, 
 	ErrorType
 };
-enum 
+enum 						//表达式里面的运算，加减乘除，比较大小，与或非，移位
 { 
 	ADDt = 0, 
 	SUBt, 
@@ -58,15 +59,16 @@ enum
 	GTt, 
 	ANDt, 
 	ORt, 
-	XORt, 
-	L_SHIFTt, 
-	R_SHIFTt, 
+	NOTt,
+	//XORt, 
+	//L_SHIFTt, 
+	//R_SHIFTt, 
 	ASSIGNt, 
 	MODt, 
-	BIT_ANDt, 
-	BIT_ORt, 
-	SELF_ADDt, 
-	SELF_SUBt 
+	//BIT_ANDt, 
+	//BIT_ORt, 
+	//SELF_ADDt, 
+	//SELF_SUBt 
 };
 
 #define MAX_CHILDREN 4
@@ -75,12 +77,12 @@ enum
 union NodeAttr {
 	int op;				//逻辑运算操作符
 	int vali;			//数值
-	char valc;			//字符串
+	char* valc;			//字符串
 	int symtbl_seq;		//符号表位置，id序号
 	
 	NodeAttr(void) { op = 0; }
 	NodeAttr(int i)	{ op = i; }
-	NodeAttr(char c) { valc = c; }
+	NodeAttr(char c) { *valc = c; }
 };
 
 struct Label {	//最后有四个label，我理解的label是语句之间的联系，即下一步需要执行的地方，则对于一个语句，要么有开始位置，还有下一个执行的位置，有跳转的还得有真值时的跳转位置以及非真时的跳转位置
@@ -133,6 +135,11 @@ public:
 		Node *child1 = NULL, Node *child2 = NULL, Node *child3 = NULL, Node *child4 = NULL); //创建新的结点
 	void get_label(void);					//生成label函数
 	void gen_code(ostream &out);			//生成代码的函数
+
+	void pushRegister(ostream &out);
+	void popRegister(ostream &out);
+	string getCurrRegister();
+
 };
 void printTree(Node* savedTree);		//遍历生成树的信息
 
